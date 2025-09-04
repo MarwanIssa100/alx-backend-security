@@ -150,3 +150,27 @@ CACHES = {
         'TIMEOUT': 300,  # 5 minutes default timeout
     }
 }
+
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Redis as message broker
+CELERY_RESULT_BACKEND = None  # No result backend needed for this project
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# Celery Beat Schedule (can also be configured in celery.py)
+CELERY_BEAT_SCHEDULE = {
+    'monitor-suspicious-ips': {
+        'task': 'ip_tracking.tasks.monitor_suspicious_ips',
+        'schedule': 3600.0,  # Every hour
+    },
+    'cleanup-old-suspicious-flags': {
+        'task': 'ip_tracking.tasks.cleanup_old_suspicious_flags',
+        'schedule': 86400.0,  # Every day
+    },
+    'auto-block-severely-suspicious-ips': {
+        'task': 'ip_tracking.tasks.auto_block_suspicious_ips',
+        'schedule': 86400.0,  # Every day
+    },
+}

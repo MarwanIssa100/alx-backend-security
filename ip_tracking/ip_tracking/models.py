@@ -140,3 +140,74 @@ class IPGeolocationCache(models.Model):
         from django.utils import timezone
         from datetime import timedelta
         return timezone.now() > self.cached_at + timedelta(hours=hours)
+
+
+class SuspiciousIP(models.Model):
+    """
+    Model to store IP addresses flagged for suspicious activity.
+    """
+    SUSPICIOUS_REASONS = [
+        ('high_volume', 'High Request Volume'),
+        ('sensitive_paths', 'Accessing Sensitive Paths'),
+        ('failed_logins', 'Multiple Failed Login Attempts'),
+        ('admin_access', 'Admin Panel Access Attempts'),
+        ('brute_force', 'Brute Force Attack Pattern'),
+    ]
+    
+    ip_address = models.GenericIPAddressField(
+        verbose_name="Suspicious IP Address",
+        help_text="The IP address flagged for suspicious activity"
+    )
+    reason = models.CharField(
+        max_length=50,
+        choices=SUSPICIOUS_REASONS,
+        verbose_name="Suspicious Activity Reason",
+        help_text="The reason why this IP was flagged"
+    )
+    details = models.TextField(
+        verbose_name="Additional Details",
+        blank=True,
+        help_text="Additional details about the suspicious activity"
+    )
+    request_count = models.PositiveIntegerField(
+        verbose_name="Request Count",
+        default=0,
+        help_text="Number of requests that triggered this flag"
+    )
+    first_seen = models.DateTimeField(
+        verbose_name="First Seen",
+        default=timezone.now,
+        help_text="When this IP was first flagged"
+    )
+    last_seen = models.DateTimeField(
+        verbose_name="Last Seen",
+        auto_now=True,
+        help_text="When this IP was last flagged"
+    )
+    is_active = models.BooleanField(
+        verbose_name="Active Flag",
+        default=True,
+        help_text="Whether this suspicious activity flag is still active"
+    )
+    
+    class Meta:
+        verbose_name = "Suspicious IP"
+        verbose_name_plural = "Suspicious IPs"
+        ordering = ['-last_seen']
+        indexes = [
+            models.Index(fields=['ip_address']),
+            models.Index(fields=['reason']),
+            models.Index(fields=['is_active']),
+            models.Index(fields=['-last_seen']),
+        ]
+        unique_together = ['ip_address', 'reason']
+    
+    def __str__(self):
+        return f"{self.ip_address} - {self.get_reason_display()}"
+    
+    def __repr__(self):
+        return f"<SuspiciousIP: {self.ip_address} - {self.reason}>"
+    
+    def get_reason_display(self):
+        """Get the human-readable reason."""
+        return dict(self.SUSPICIOUS_REASONS).get(self.reason, self.reason)

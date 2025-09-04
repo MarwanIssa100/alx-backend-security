@@ -9,7 +9,8 @@ A Django project that tracks IP addresses, blocks malicious IPs, and provides ge
 - **Geolocation**: Automatically detects country and city for each IP address
 - **Caching**: 24-hour cache for geolocation data to minimize API calls
 - **Rate Limiting**: Configurable rate limits (10 req/min for authenticated users, 5 req/min for anonymous users)
-- **Management Commands**: Easy-to-use commands for managing blocked IPs, cache, and testing rate limits
+- **Automated Security Monitoring**: Celery-based hourly monitoring for suspicious IP activity
+- **Management Commands**: Easy-to-use commands for managing blocked IPs, cache, testing rate limits, and security tasks
 
 ## Installation
 
@@ -60,6 +61,18 @@ python manage.py test_rate_limits --user testuser
 python manage.py test_rate_limits --endpoint /api/login/
 ```
 
+### Security Monitoring
+```bash
+# Run all security monitoring tasks
+python manage.py monitor_suspicious_ips
+
+# Run specific security task
+python manage.py monitor_suspicious_ips --task monitor
+
+# Preview what would be done (dry run)
+python manage.py monitor_suspicious_ips --dry-run
+```
+
 ## Models
 
 ### RequestLog
@@ -82,6 +95,16 @@ Caches geolocation data to avoid repeated API calls:
 - `country`: Cached country data
 - `city`: Cached city data
 - `cached_at`: When data was cached
+
+### SuspiciousIP
+Stores IP addresses flagged for suspicious activity:
+- `ip_address`: Flagged IP address
+- `reason`: Type of suspicious activity (high_volume, sensitive_paths, failed_logins, admin_access, brute_force)
+- `details`: Additional context about the activity
+- `request_count`: Number of requests that triggered the flag
+- `first_seen`: When the IP was first flagged
+- `last_seen`: When the IP was last flagged
+- `is_active`: Whether the flag is still active
 
 ## Middleware
 
