@@ -16,7 +16,21 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    # Authentication endpoints (rate limited)
+    path('api/login/', views.login_view, name='login'),
+    
+    # Protected endpoints (rate limited for authenticated users)
+    path('api/dashboard/', views.dashboard_view, name='dashboard'),
+    path('api/profile/', views.profile_view, name='profile'),
+    
+    # Public endpoints (no rate limiting)
+    path('health/', views.health_check, name='health_check'),
+    
+    # Rate limit test endpoints
+    path('api/test-rate-limit/', views.RateLimitTestView.as_view(), name='test_rate_limit'),
 ]

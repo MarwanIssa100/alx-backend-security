@@ -8,7 +8,8 @@ A Django project that tracks IP addresses, blocks malicious IPs, and provides ge
 - **IP Blocking**: Block specific IP addresses from accessing the site
 - **Geolocation**: Automatically detects country and city for each IP address
 - **Caching**: 24-hour cache for geolocation data to minimize API calls
-- **Management Commands**: Easy-to-use commands for managing blocked IPs and cache
+- **Rate Limiting**: Configurable rate limits (10 req/min for authenticated users, 5 req/min for anonymous users)
+- **Management Commands**: Easy-to-use commands for managing blocked IPs, cache, and testing rate limits
 
 ## Installation
 
@@ -47,6 +48,18 @@ python manage.py clear_expired_cache --hours 48
 python manage.py clear_expired_cache --dry-run
 ```
 
+### Test Rate Limits
+```bash
+# Test rate limiting for anonymous users
+python manage.py test_rate_limits
+
+# Test rate limiting for authenticated users
+python manage.py test_rate_limits --user testuser
+
+# Test rate limiting on specific endpoint
+python manage.py test_rate_limits --endpoint /api/login/
+```
+
 ## Models
 
 ### RequestLog
@@ -72,11 +85,20 @@ Caches geolocation data to avoid repeated API calls:
 
 ## Middleware
 
-The `IPTrackingMiddleware` automatically:
+### IPTrackingMiddleware
+Automatically:
 1. Checks if the requesting IP is blocked
 2. Logs request details to the database
 3. Fetches and caches geolocation data
 4. Returns 403 Forbidden for blocked IPs
+
+### RateLimitMiddleware
+Applies rate limiting:
+1. **Authenticated users**: 10 requests per minute
+2. **Anonymous users**: 5 requests per minute
+3. **Sliding window**: 60-second window for rate calculation
+4. **Cache-based**: Uses Django's cache framework for tracking
+5. **Configurable**: Limits and paths can be configured in settings
 
 ## Geolocation API
 
@@ -87,6 +109,41 @@ Uses the free [IP-API](http://ip-api.com/) service for geolocation data. The ser
 - Caches results for 24 hours
 
 ## Configuration
+
+### Rate Limiting
+Rate limiting is configured in `settings.py`:
+
+```python
+RATE_LIMIT_CONFIG = {
+    'AUTHENTICATED_USERS': {
+        'REQUESTS_PER_MINUTE': 10,
+        'WINDOW_SIZE': 60,  # seconds
+    },
+    'ANONYMOUS_USERS': {
+        'REQUESTS_PER_MINUTE': 5,
+        'WINDOW_SIZE': 60,  # seconds
+    },
+    'SKIP_PATHS': [
+        '/health/',
+        '/static/',
+        '/media/',
+        '/admin/jsi18n/',
+    ],
+}
+```
+
+### Cache Configuration
+Rate limiting uses Django's cache framework:
+
+```python
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 300,  # 5 minutes default timeout
+    }
+}
+```
 
 The middleware is automatically registered in `settings.py`. No additional configuration is required.
 

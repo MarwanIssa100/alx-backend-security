@@ -48,6 +48,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'ip_tracking.middleware.IPTrackingMiddleware',
+    'ip_tracking.rate_limit_middleware.RateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'ip_tracking.urls'
@@ -122,3 +123,30 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Rate Limiting Configuration
+RATE_LIMIT_CONFIG = {
+    'AUTHENTICATED_USERS': {
+        'REQUESTS_PER_MINUTE': 10,
+        'WINDOW_SIZE': 60,  # seconds
+    },
+    'ANONYMOUS_USERS': {
+        'REQUESTS_PER_MINUTE': 5,
+        'WINDOW_SIZE': 60,  # seconds
+    },
+    'SKIP_PATHS': [
+        '/health/',
+        '/static/',
+        '/media/',
+        '/admin/jsi18n/',
+    ],
+}
+
+# Cache Configuration for Rate Limiting
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 300,  # 5 minutes default timeout
+    }
+}
