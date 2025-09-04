@@ -19,6 +19,20 @@ class RequestLog(models.Model):
         verbose_name="Request Path",
         help_text="The URL path that was requested"
     )
+    country = models.CharField(
+        max_length=100,
+        verbose_name="Country",
+        blank=True,
+        null=True,
+        help_text="Country where the IP address is located"
+    )
+    city = models.CharField(
+        max_length=100,
+        verbose_name="City",
+        blank=True,
+        null=True,
+        help_text="City where the IP address is located"
+    )
     
     class Meta:
         verbose_name = "Request Log"
@@ -28,10 +42,13 @@ class RequestLog(models.Model):
             models.Index(fields=['-timestamp']),
             models.Index(fields=['ip_address']),
             models.Index(fields=['path']),
+            models.Index(fields=['country']),
+            models.Index(fields=['city']),
         ]
     
     def __str__(self):
-        return f"{self.ip_address} - {self.path} - {self.timestamp}"
+        location = f" ({self.city}, {self.country})" if self.city and self.country else ""
+        return f"{self.ip_address} - {self.path} - {self.timestamp}{location}"
     
     def __repr__(self):
         return f"<RequestLog: {self.ip_address} at {self.timestamp}>"
@@ -71,3 +88,55 @@ class BlockedIP(models.Model):
     
     def __repr__(self):
         return f"<BlockedIP: {self.ip_address}>"
+
+
+class IPGeolocationCache(models.Model):
+    """
+    Cache for IP geolocation data to avoid repeated API calls.
+    """
+    ip_address = models.GenericIPAddressField(
+        verbose_name="IP Address",
+        help_text="The IP address for which geolocation data is cached",
+        unique=True
+    )
+    country = models.CharField(
+        max_length=100,
+        verbose_name="Country",
+        blank=True,
+        null=True,
+        help_text="Country where the IP address is located"
+    )
+    city = models.CharField(
+        max_length=100,
+        verbose_name="City",
+        blank=True,
+        null=True,
+        help_text="City where the IP address is located"
+    )
+    cached_at = models.DateTimeField(
+        verbose_name="Cached At",
+        default=timezone.now,
+        help_text="When this geolocation data was cached"
+    )
+    
+    class Meta:
+        verbose_name = "IP Geolocation Cache"
+        verbose_name_plural = "IP Geolocation Caches"
+        ordering = ['-cached_at']
+        indexes = [
+            models.Index(fields=['ip_address']),
+            models.Index(fields=['cached_at']),
+        ]
+    
+    def __str__(self):
+        location = f" ({self.city}, {self.country})" if self.city and self.country else " (Unknown location)"
+        return f"{self.ip_address}{location}"
+    
+    def __repr__(self):
+        return f"<IPGeolocationCache: {self.ip_address}>"
+    
+    def is_expired(self, hours=24):
+        """Check if the cache entry has expired (default: 24 hours)."""
+        from django.utils import timezone
+        from datetime import timedelta
+        return timezone.now() > self.cached_at + timedelta(hours=hours)
