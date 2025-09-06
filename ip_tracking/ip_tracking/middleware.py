@@ -3,6 +3,7 @@ import requests
 from django.utils import timezone
 from django.http import HttpResponseForbidden
 from .models import RequestLog, BlockedIP, IPGeolocationCache
+import dj_database_url
 
 logger = logging.getLogger(__name__)
 
